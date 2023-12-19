@@ -1,0 +1,40 @@
+---
+title: "About This Website"
+---
+
+This is an [R Markdown website](http://rmarkdown.rstudio.com/rmarkdown_websites.html), created by [Julia Wrobel](http://juliawrobel.com) for a multiplex single-cell imaging data workshop at the University of Michigan Department of Biostatistics.
+
+In the short course, we'll actively use several packages which are listed below. Code to install the packages follows, and version information about each of these packages and their dependencies is at the bottom of this page.
+
+Installing packages from CRAN
+
+```{r, eval=FALSE}
+# main packages
+install.packages(c("tidyverse", "spatstat", "spatialTIME", "mxnorm","refund",
+                   "refund.shiny", "tiff", "survival"))
+
+# additional packages used for visualization
+install.packages(c("viridis", "patchwork"))
+```
+
+Installing packages from Bioconductor
+
+```{r, eval = FALSE}
+# install Bioconductor
+BiocManager::install(version = "3.16")
+
+# VectraPolarisData
+BiocManager::install("VectraPolarisData")
+
+# EBImage
+BiocManager::install("EBImage")
+```
+
+
+
+Versions of key packages:
+
+```{r}
+devtools::session_info(c("tidyverse", "VectraPolarisData", "spatstat", "spatialTIME", "refund"))
+```
+

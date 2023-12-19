@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+
+
+<title>Modeling patient-level outcomes</title>
+
+<script src="site_libs/header-attrs-2.21/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/flatly.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<link href="site_libs/font-awesome-6.2.1/css/all.min.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-6.2.1/css/v4-shims.min.css" rel="stylesheet" />
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">Analysis of multiplex single-cell imaging data in R</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+    Short Course
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="MI_Data.html">Data Download</a>
+    </li>
+    <li>
+      <a href="MI_intro.html">Background on multiplex single-cell imaging</a>
+    </li>
+    <li>
+      <a href="MI_VectraPolarisData.html">VectraPolarisData package</a>
+    </li>
+    <li>
+      <a href="MI_normalization.html">Segmentation, normalization, and phenotyping</a>
+    </li>
+    <li>
+      <a href="MI_spatialAnalysis.html">Extracting spatial summary statistics</a>
+    </li>
+    <li>
+      <a href="MI_fda.html">Modeling patient-level outcomes</a>
+    </li>
+  </ul>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+  <a href="about.html">About</a>
+</li>
+<li>
+  <a href="https://github.com/julia-wrobel/MI_tutorial">
+    <span class="fa fa-github fa-lg"></span>
+     
+  </a>
+</li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Modeling patient-level outcomes</h1>
+
+</div>
+
+
+<div id="slide-deck" class="section level2">
+<h2>Slide Deck</h2>
+<iframe class="speakerdeck-iframe" frameborder="0" src="https://speakerdeck.com/player/3710e7390c4842afb3f85c22e729ecde" title="MI_fda" allowfullscreen="true" style="border: 0px; background: padding-box padding-box rgba(0, 0, 0, 0.1); margin: 0px; padding: 0px; border-radius: 6px; box-shadow: rgba(0, 0, 0, 0.2) 0px 5px 40px; width: 100%; height: auto; aspect-ratio: 560 / 314;" data-ratio="1.78343949044586">
+</iframe>
+</div>
+<div id="overview" class="section level2">
+<h2>Overview</h2>
+<p>This module focuses on modeling patient-level outcomes, specifically
+patient survival time, using spatial summary statistics derived from
+multiplex images as model covariates. First we use traditional
+regression models and single-number patient summaries. Then, we model
+entire spatial summary functions using methods from functional data
+analysis.</p>
+<p>Load data and libraries.</p>
+<pre class="r"><code>library(tidyverse)
+library(patchwork)
+library(spatstat)
+library(survival)
+library(refund)
+library(refund.shiny)
+
+# load processed ovarian cancer data from GitHub
+load(url(&quot;https://github.com/julia-wrobel/MI_tutorial/raw/main/Data/ovarian.RDA&quot;))</code></pre>
+</div>
+<div id="regression-with-patient-level-outcomes" class="section level2">
+<h2>Regression with patient level outcomes</h2>
+<p>The general workflow is:</p>
+<ol style="list-style-type: decimal">
+<li>Select a spatial summary measure (e.g. bivariate Ripley’s K).</li>
+<li>Choose a particular radius <em>r</em> at which to evaluate Ripley’s
+K. This can be selected based on clinical knowledge.</li>
+<li>Choose a cell spatial relationship you want to analyze
+(e.g. co-occurence of B-cells and macrophages).</li>
+<li>Evaluate bivariate Ripley’s K for B-cells and Macrophages at radius
+<em>r</em> for all images in the dataset. This will result in a single
+number spatial summary for each image.</li>
+<li>Select a patient-level outcome of interest (e.g. survival)</li>
+<li>Model the outcome, using and the spatial summary statistic as a
+covariate. Include other potential confounders.</li>
+</ol>
+<div id="ovarian-immune-cell-clustering-and-patient-survival"
+class="section level3">
+<h3>Ovarian immune cell clustering and patient survival</h3>
+<p>Let’s say I am interested in the relationship between patient
+survival and the clustering of immune cells within the tumor areas in
+the ovarian cancer dataset.</p>
+<p>For this analysis I will collapse immune cell subtypes (B-cell,
+macrophage, CD8 T cell) into one “immune cell” category. I will then
+calculate univariate L at radius <em>r = 100</em> for immune cells. It
+would also be reasonable to use the K or G function.</p>
+<div id="calculating-the-spatial-summary-statistics"
+class="section level4">
+<h4>Calculating the spatial summary statistics</h4>
+<p>First I define a function that can be used to extract the L-function
+at a particular radius or set of radii.</p>
+<pre class="r"><code>
+# function to extract univariate spatial summary statistics
+# replace argument func = Lest with func = Kest to get K function estimates
+# returns a data frame with estimate L values and L under CSR and different radii
+extract_univariate = function(data, x = &quot;x&quot;, y = &quot;y&quot;,
+                      subject_id = &quot;sample_id&quot;,
+                      marksvar,
+                      mark1 = &quot;immune&quot;,
+                      r_vec = seq(0, 300, by = 10),
+                      func = Lest){
+  # create a convex hull as the observation window
+  w = convexhull.xy(data[[x]], data[[y]])
+
+  # create ppp object
+  pp_obj = ppp(data[[x]], data[[y]], window = w, marks = data[[marksvar]])
+
+  # estimate L using spatstat
+  L_spatstat = func(subset(pp_obj, marks == mark1),
+                    r = r_vec,
+                    correction = c(&quot;iso&quot;)
+  )
+  
+  df = as_tibble(L_spatstat) %&gt;%
+    select(r, L = iso, csr = theo) %&gt;%
+    mutate(Ldiff = L - csr,
+           subject_id = data[[subject_id]][1]) %&gt;%
+    select(subject_id, r, L, csr, Ldiff)
+
+  df
+
+}</code></pre>
+<p>Then I organize the data and apply this function to all images in the
+dataset.</p>
+<pre class="r"><code>df_nest = ovarian_df %&gt;%
+  # subset to tumor areas
+  filter(tissue_category == &quot;Tumor&quot;) %&gt;%
+  mutate(id = sample_id) %&gt;%
+  dplyr::select(sample_id, x, y, immune, id) %&gt;%
+  nest(data = c(sample_id, x, y, immune))
+
+L_df = map_dfr(df_nest$data, extract_univariate, 
+               marksvar = &quot;immune&quot;, mark1 = &quot;immune&quot;,
+               r_vec = c(0, 50, 100))
+## Warning: data contain duplicated points
+## Warning: 1 point was rejected as lying outside the specified window
+## Warning: data contain duplicated points
+## Warning: 1 point was rejected as lying outside the specified window
+
+L_df
+## # A tibble: 384 × 5
+##    subject_id     r     L   csr Ldiff
+##         &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+##  1         68     0   0       0   0  
+##  2         68    50  83.5    50  33.5
+##  3         68   100 138.    100  37.6
+##  4         69     0   0       0   0  
+##  5         69    50 114.     50  64.1
+##  6         69   100 176.    100  76.1
+##  7         70     0   0       0   0  
+##  8         70    50  62.9    50  12.9
+##  9         70   100 115.    100  15.4
+## 10         71     0   0       0   0  
+## # ℹ 374 more rows</code></pre>
+<p>We want to use the <code>Ldiff</code> variable, which is the
+difference between the observed L and the theoretical L under CSR, in
+our model. This value will be positive if cells are clustered in an
+image, negative if cells show spatial regularity, and close to zer0 if
+cells exhibit CSR. We will select the <code>Ldiff</code> value at <em>r
+= 100</em>. I visualize this variable below.</p>
+<pre class="r"><code>L_df = L_df %&gt;%
+  filter(r == 100) %&gt;%
+  select(subject_id, Ldiff)
+
+L_df %&gt;%
+  ggplot(aes(Ldiff)) +
+  geom_histogram() +
+  geom_vline(xintercept = 0) </code></pre>
+<p><img src="MI_fda_files/figure-html/unnamed-chunk-5-1.png" width="90%" /></p>
+<p>Let’s examine the subject with the outlying Ldiff value. It appears
+that they have very few immune cells, so the Ldiff cannot be well
+estimated. We will remove this subject.</p>
+<pre class="r"><code>id = L_df %&gt;% filter(Ldiff &gt; 200)  %&gt;% pull(subject_id)
+
+ovarian_df %&gt;% 
+  filter(sample_id %in% id,
+         tissue_category == &quot;Tumor&quot;) %&gt;%
+  ggplot(aes(x, y, color = immune)) +
+  geom_point(size = .1)</code></pre>
+<p><img src="MI_fda_files/figure-html/unnamed-chunk-6-1.png" width="90%" /></p>
+<pre class="r"><code>
+# remove this subject
+L_df = L_df %&gt;% filter(Ldiff &lt;=200)</code></pre>
+</div>
+<div id="modeling-patient-survival" class="section level4">
+<h4>Modeling patient survival</h4>
+<p>First I merge the patient level outcome data with the L summary
+statistics.</p>
+<pre class="r"><code>survival_df = ovarian_df %&gt;%
+  # rename id variable to be compatible with L_df and select covariates of interest
+  dplyr::select(subject_id = sample_id, 
+                survival_time, death, age = age_at_diagnosis) %&gt;%
+  # delete duplicates- should only have one row per subject
+  distinct() %&gt;%
+  # remove subject with outlying survival time
+  filter(survival_time &lt; 200) %&gt;%
+  # merge with L function data
+  left_join(., L_df, by = &quot;subject_id&quot;)</code></pre>
+<p>Below I plot the survival time against Ldiff values, colored by
+survival status. It does appear that lower values of Ldiff (indicating
+less extreme immune clustering) have longer survival times.</p>
+<pre class="r"><code>survival_df %&gt;%
+  ggplot(aes(Ldiff, survival_time)) +
+  geom_point(aes(color = factor(death)))
+## Warning: Removed 1 rows containing missing values (`geom_point()`).</code></pre>
+<p><img src="MI_fda_files/figure-html/unnamed-chunk-8-1.png" width="90%" /></p>
+<p>Last we run a proportional hazards model to model this different. We
+will run this model using functions from the <code>survival</code>
+package.</p>
+<pre class="r"><code>phmod = coxph(Surv(survival_time, death) ~ Ldiff + age, 
+              data = survival_df)
+summary(phmod)
+## Call:
+## coxph(formula = Surv(survival_time, death) ~ Ldiff + age, data = survival_df)
+## 
+##   n= 126, number of events= 79 
+##    (1 observation deleted due to missingness)
+## 
+##           coef exp(coef) se(coef)     z Pr(&gt;|z|)   
+## Ldiff 0.009221  1.009263 0.002911 3.168  0.00153 **
+## age   0.014171  1.014272 0.011298 1.254  0.20974   
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+##       exp(coef) exp(-coef) lower .95 upper .95
+## Ldiff     1.009     0.9908    1.0035     1.015
+## age       1.014     0.9859    0.9921     1.037
+## 
+## Concordance= 0.621  (se = 0.034 )
+## Likelihood ratio test= 13.5  on 2 df,   p=0.001
+## Wald test            = 14.9  on 2 df,   p=6e-04
+## Score (logrank) test = 15.6  on 2 df,   p=4e-04</code></pre>
+<p>Here the coefficients are log-hazard ratios. The exponentiated
+coefficient for <code>Ldiff</code> &gt; 1, indicating that the hazard of
+death is greater for a subject with a greater degree of immune
+clustering.</p>
+<p>Some caveats about this analysis:</p>
+<ul>
+<li>We cannot distinguish clustering from inhomogeneity, so we may want
+to consider calculating L using a metric that takes into account
+potential inhomogeneity in the distribution of cells. This could be the
+<code>spatstat::Linhom()</code> function, or using the permutation
+approach in <code>spatialTIME</code>.</li>
+<li>It is important to check validity of model assumptions, which we
+have not done here</li>
+<li>In a more thorough analysis I would control for other clinical
+variables that may be potential confounders.</li>
+</ul>
+</div>
+</div>
+<div id="macrophage-and-b-cell-co-occurence-in-ovarian-cancer"
+class="section level3">
+<h3>Macrophage and B-cell co-occurence in ovarian cancer</h3>
+<p>Here I am interested in the relationship between patient survival and
+the co-occurence of B cells and macrophages in the ovarian cancer
+dataset. I will use bivariate L at radius <em>r = 100</em> to assess the
+spatial relationship between B-cells and macrophages.</p>
+<div id="calculating-the-spatial-summary-statistics-1"
+class="section level4">
+<h4>Calculating the spatial summary statistics</h4>
+<p>First I define a function that can be used to extract the bivariate
+L-function at a particular radius or set of radii.</p>
+<pre class="r"><code># function to extract univariate spatial summary statistics
+extract_bivariate = function(data, x = &quot;x&quot;, y = &quot;y&quot;,
+                             subject_id = &quot;sample_id&quot;,
+                             marksvar,
+                             mark1 = &quot;B-cell&quot;,
+                             mark2 = &quot;macrophage&quot;,
+                             r_vec = seq(0, 300, by = 10)){
+  # create a convex hull as the observation window
+  w = convexhull.xy(data[[x]], data[[y]])
+
+  # create ppp object
+  pp_obj = ppp(data[[x]], data[[y]], window = w, marks = data[[marksvar]])
+
+  # estimate L using spatstat
+  L_spatstat = Lcross(pp_obj, mark1, mark2, r = r_vec, correction = &quot;iso&quot;)
+  
+  df = as_tibble(L_spatstat) %&gt;%
+    select(r, L = iso, csr = theo) %&gt;%
+    mutate(Ldiff = L - csr,
+           subject_id = data[[subject_id]][1]) %&gt;%
+    select(subject_id, r, L, csr, Ldiff)
+
+  df
+}</code></pre>
+<p>Then I organize the data to apply this function. However, some
+subjects do not have enough B-cells or macrophages to calculate the L
+function. We will exclude subjects with &lt; 3 macrophages or &lt; 3
+B-cells in the tumor area. In doing so, we lose several subjects.</p>
+<pre class="r"><code>df_bivariate = ovarian_df %&gt;%
+  filter(tissue_category == &quot;Tumor&quot;) %&gt;%
+  # subset to tumor areas
+  filter(tissue_category == &quot;Tumor&quot;) %&gt;%
+  # define B cell or macrophage variable
+  mutate(id = sample_id,
+         phenotype = case_when(phenotype_cd19 == &quot;CD19+&quot; ~ &quot;B-cell&quot;,
+                               phenotype_cd68 == &quot;CD68+&quot; ~ &quot;macrophage&quot;,
+                               TRUE ~ &quot;other&quot;),
+         phenotype = factor(phenotype)) %&gt;%
+  filter(phenotype != &quot;other&quot;) %&gt;%
+  dplyr::select(sample_id, x, y, phenotype, id) %&gt;%
+  # calculate number of macrophages and B-cells for each subject
+  group_by(sample_id)  %&gt;%
+  mutate(n_Bcell = sum(phenotype == &quot;B-cell&quot;),
+         n_mac = sum(phenotype == &quot;macrophage&quot;)) %&gt;%
+  ungroup() %&gt;%
+  filter(n_Bcell &gt; 2, n_mac &gt; 2) %&gt;%
+  # nest data
+  nest(data = c(sample_id, x, y, phenotype))</code></pre>
+<pre class="r"><code>Lbivariate_df = map_dfr(df_bivariate$data, extract_bivariate, 
+                        marksvar = &quot;phenotype&quot;, 
+                        r_vec = c(0, 50, 100))
+
+Lbivariate_df
+## # A tibble: 198 × 5
+##    subject_id     r     L   csr  Ldiff
+##         &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;
+##  1         68     0   0       0  0    
+##  2         68    50  64.3    50 14.3  
+##  3         68   100  99.3   100 -0.730
+##  4         69     0   0       0  0    
+##  5         69    50  57.6    50  7.61 
+##  6         69   100 141.    100 41.1  
+##  7         70     0   0       0  0    
+##  8         70    50  49.4    50 -0.565
+##  9         70   100 140.    100 39.8  
+## 10         72     0   0       0  0    
+## # ℹ 188 more rows</code></pre>
+<p>Histogram of the bivariate Ldiff variable:</p>
+<pre class="r"><code>Lbivariate_df = Lbivariate_df %&gt;%
+  filter(r == 100) %&gt;%
+  select(subject_id, Ldiff)
+
+Lbivariate_df %&gt;%
+  ggplot(aes(Ldiff)) +
+  geom_histogram() +
+  geom_vline(xintercept = 0) </code></pre>
+<p><img src="MI_fda_files/figure-html/unnamed-chunk-13-1.png" width="90%" /></p>
+</div>
+<div id="modeling-patient-survival-1" class="section level4">
+<h4>Modeling patient survival</h4>
+<p>First I merge the patient level outcome data with the L summary
+statistics.</p>
+<pre class="r"><code>survival_df = ovarian_df %&gt;%
+  # rename id variable to be compatible with L_df and select covariates of interest
+  dplyr::select(subject_id = sample_id, 
+                survival_time, death, age = age_at_diagnosis) %&gt;%
+  # delete duplicates- should only have one row per subject
+  distinct() %&gt;%
+  # remove subject with outlying survival time
+  filter(survival_time &lt; 200) %&gt;%
+  # merge with L function data
+  left_join(., Lbivariate_df, by = &quot;subject_id&quot;)</code></pre>
+<p>Now it appears that larger L values (more clustering between B cells
+and macrophages) is associated with better survival prognosis.</p>
+<pre class="r"><code>survival_df %&gt;%
+  ggplot(aes(Ldiff, survival_time)) +
+  geom_point(aes(color = factor(death)))
+## Warning: Removed 61 rows containing missing values (`geom_point()`).</code></pre>
+<p><img src="MI_fda_files/figure-html/unnamed-chunk-15-1.png" width="90%" /></p>
+<p>Run the proportional hazards regression model with bivariate L as a
+covariate.</p>
+<pre class="r"><code>phmod2 = coxph(Surv(survival_time, death) ~ Ldiff + age, 
+              data = survival_df)
+summary(phmod2)
+## Call:
+## coxph(formula = Surv(survival_time, death) ~ Ldiff + age, data = survival_df)
+## 
+##   n= 66, number of events= 35 
+##    (61 observations deleted due to missingness)
+## 
+##            coef exp(coef)  se(coef)      z Pr(&gt;|z|)  
+## Ldiff -0.014583  0.985522  0.006935 -2.103   0.0355 *
+## age    0.012650  1.012730  0.015464  0.818   0.4133  
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+##       exp(coef) exp(-coef) lower .95 upper .95
+## Ldiff    0.9855     1.0147    0.9722     0.999
+## age      1.0127     0.9874    0.9825     1.044
+## 
+## Concordance= 0.567  (se = 0.063 )
+## Likelihood ratio test= 5.28  on 2 df,   p=0.07
+## Wald test            = 5.35  on 2 df,   p=0.07
+## Score (logrank) test = 5.39  on 2 df,   p=0.07</code></pre>
+<p>Now the exponentiated coefficient for <code>Ldiff</code> &lt; 1,
+indicating that the hazard of death is smaller for a subject with a
+greater degree co-occurence between B-cells and macrophages.</p>
+<p>Some caveats about this analysis:</p>
+<ul>
+<li>We removed a lot of subjects (61) because we didn’t have enough
+subjects to calculate the bivariate L function. I would recommend
+either:
+<ul>
+<li>Creating a categorical L variable that includes a “not estimable”
+group so as to not lose these subjects</li>
+<li>Or, using something like the G function which is more robust to rare
+cells and fewer subjects would be lost.</li>
+</ul></li>
+</ul>
+</div>
+</div>
+</div>
+<div id="functional-data-analysis" class="section level2">
+<h2>Functional data analysis</h2>
+<p>Functional data analysis allows you to leverage information from the
+full spatial summary function (e.g. K-function) rather than picking a
+specific radius <em>r</em>, which can be an arbitrary choice.</p>
+<p>The general workflow is:</p>
+<ol style="list-style-type: decimal">
+<li>Select a spatial summary function (e.g. bivariate Ripley’s K).</li>
+<li>Evaluate spatial summary function for the cell(s) of choice over a
+range of biologically meaningful radii. This will result in one spatial
+summary function for each image.</li>
+<li>Visualize the functions</li>
+<li>Select a patient-level outcome of interest (e.g. survival)</li>
+<li>Choose a functional data model (functional principal components
+analysis or functional regression)</li>
+</ol>
+<p>I will use the ovarian immune cell clustering analysis above as a
+starting point, and use a functional principal components analysis
+approach. Resources for functional regression are provided in the
+“references” section below. Here I am interested in the relationship
+between patient survival and the clustering of immune cells within the
+tumor areas in the ovarian cancer dataset. I will calculate a univariate
+L function for immune cells.</p>
+<div id="estimating-the-spatial-summary-functions"
+class="section level4">
+<h4>Estimating the spatial summary functions</h4>
+<p>I can use the same <code>extract_univariate</code> function I defined
+above to compute the L function at several radii across subjects. This
+is performed below:</p>
+<pre class="r"><code>df_nest = ovarian_df %&gt;%
+  # subset to tumor areas
+  filter(tissue_category == &quot;Tumor&quot;) %&gt;%
+  mutate(id = sample_id) %&gt;%
+  dplyr::select(sample_id, x, y, immune, id) %&gt;%
+  nest(data = c(sample_id, x, y, immune))
+
+# we are evaluating L at 100 different radii, so this will take some time to compute
+L_fda_df = map_dfr(df_nest$data, extract_univariate, 
+               marksvar = &quot;immune&quot;, mark1 = &quot;immune&quot;,
+               r_vec = seq(0, 200, length.out = 100))
+## Warning: data contain duplicated points
+## Warning: 1 point was rejected as lying outside the specified window
+## Warning: data contain duplicated points
+## Warning: 1 point was rejected as lying outside the specified window
+
+head(L_fda_df)
+## # A tibble: 6 × 5
+##   subject_id     r     L   csr Ldiff
+##        &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1         68  0      0    0     0   
+## 2         68  2.02   0    2.02 -2.02
+## 3         68  4.04  19.3  4.04 15.2 
+## 4         68  6.06  24.7  6.06 18.6 
+## 5         68  8.08  31.3  8.08 23.2 
+## 6         68 10.1   35.4 10.1  25.3</code></pre>
+<p>Let’s visualize the L functions across subjects using a spaghetti
+plot.</p>
+<pre class="r"><code>Lp = L_fda_df %&gt;%
+  ggplot(aes(r, L, group = subject_id)) +
+  geom_line(alpha = 0.4) +
+  geom_line(data = filter(L_fda_df, subject_id == 68), aes(y = csr), color = &quot;red3&quot;,
+            linetype = 2) +
+  ggtitle(&quot;L(r)&quot;)
+
+
+Lp2 = L_fda_df %&gt;%
+  ggplot(aes(r, Ldiff, group = subject_id)) +
+  geom_line(alpha = 0.4) +
+  geom_hline(yintercept = 0, color = &quot;red3&quot;, linetype = 2) +
+  ggtitle(&quot;L(r)-r&quot;)
+
+Lp + Lp2</code></pre>
+<p><img src="MI_fda_files/figure-html/spaghetti-1.png" width="90%" /></p>
+</div>
+<div id="functional-principal-components-analysis"
+class="section level4">
+<h4>Functional principal components analysis</h4>
+<p>FPCA can be performed for dimension reduction, then functional
+principal component scores can be used as covariates in a traditional
+regression model. I run fpca using the <code>fpca.face()</code> function
+from the <code>refund</code> package.</p>
+<pre class="r"><code># convert Ldiff functions from  long to wide format for use in refund
+Lmat = L_fda_df %&gt;% 
+  dplyr::select(subject_id, r, Ldiff) %&gt;%
+  pivot_wider(names_from = r, 
+              names_glue = &quot;r_{round(r, 2)}&quot;,
+              values_from = Ldiff) %&gt;%
+  arrange(subject_id) %&gt;%
+  dplyr::select(-subject_id) %&gt;%
+  as.matrix()
+
+# run fpca
+set.seed(133)
+L_fpc = fpca.sc(Y = Lmat, pve = .99)
+
+# if you have a large dataset, instead use fpca.face:
+# L_fpc = fpca.face(Y = Lmat, pve = .99, knots = 50)</code></pre>
+<p>We can interactively visualize the results of the fpca using the
+<code>plot_shiny</code> function from the <code>refund.shiny</code>
+package. Note that you can’t knit this in an .Rmd file, which is why it
+is commented out in the code below.</p>
+<pre class="r"><code>library(refund.shiny)
+plot_shiny(L_fpc)</code></pre>
+<p>We’ll use the first 2 principal components since they explain 99% of
+the variance in the data. The scores from these 2 PCs will be used as
+covariates in a proportional hazards model.</p>
+<ul>
+<li>PC 1 interpretation: negative scores indicate high L values across
+all radii</li>
+<li>PC 2 interpretation: negative scores indicate L function is higher
+at small radii then gets lower, where high scores indicate L is steadily
+increasing over r</li>
+</ul>
+<p>To use these as covariates we need to merge them with the clinical
+data. Let’s also multiple PC1 by -1 so it has the interpretation that
+higher PC1 score indicates higher values for the L function.</p>
+<pre class="r"><code>score_df = tibble(sample_id = 1:128,
+                     fpc1 = L_fpc$scores[,1] * -1,
+                     fpc2 = L_fpc$scores[,2])
+
+surv_fpca_df = ovarian_df %&gt;%
+  dplyr::select(sample_id, survival_time, death, age = age_at_diagnosis) %&gt;%
+  # delete duplicates- should only have one row per subject
+  distinct() %&gt;%
+  # remove subject with outlying survival time
+  filter(survival_time &lt; 200) %&gt;%
+  # merge with L function data
+  left_join(., score_df, by = &quot;sample_id&quot;)</code></pre>
+<p>Let’s do some exploratory analysis first.</p>
+<pre class="r"><code>p1 = surv_fpca_df %&gt;%
+  ggplot(aes(fpc1, survival_time, color = factor(death))) +
+  geom_point() + ggtitle(&quot;fpc1&quot;)
+
+p2 = surv_fpca_df %&gt;%
+  ggplot(aes(fpc2, survival_time, color = factor(death))) +
+  geom_point() + ggtitle(&quot;fpc2&quot;)
+
+p1 + p2</code></pre>
+<p><img src="MI_fda_files/figure-html/unnamed-chunk-21-1.png" width="90%" /></p>
+<p>Finally, we’ll model survival as the outcome with fpc scores as
+covariates.</p>
+<pre class="r"><code>phmod_fpca = coxph(Surv(survival_time, death) ~ fpc1 + fpc2 + age, 
+              data = surv_fpca_df)
+summary(phmod_fpca)
+## Call:
+## coxph(formula = Surv(survival_time, death) ~ fpc1 + fpc2 + age, 
+##     data = surv_fpca_df)
+## 
+##   n= 127, number of events= 80 
+## 
+##           coef exp(coef)  se(coef)      z Pr(&gt;|z|)   
+## fpc1  0.007829  1.007859  0.002526  3.099  0.00194 **
+## fpc2 -0.003667  0.996340  0.012310 -0.298  0.76579   
+## age   0.014329  1.014432  0.011390  1.258  0.20836   
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+##      exp(coef) exp(-coef) lower .95 upper .95
+## fpc1    1.0079     0.9922    1.0029     1.013
+## fpc2    0.9963     1.0037    0.9726     1.021
+## age     1.0144     0.9858    0.9920     1.037
+## 
+## Concordance= 0.626  (se = 0.034 )
+## Likelihood ratio test= 13.75  on 3 df,   p=0.003
+## Wald test            = 17.69  on 3 df,   p=5e-04
+## Score (logrank) test = 18.08  on 3 df,   p=4e-04</code></pre>
+</div>
+</div>
+<div id="references" class="section level2">
+<h2>References</h2>
+<ul>
+<li><a
+href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4864857/">interactive
+visualization of functional data with refund.shiny</a></li>
+<li><a
+href="https://www.biorxiv.org/content/10.1101/2022.06.17.496475v1.full.pdf">a
+paper using a Cox model with FPC scores for multiplex imaging
+data</a></li>
+<li><a
+href="https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1009486">functional
+Cox regression with multiplex imaging data</a></li>
+<li><a href="https://pubmed.ncbi.nlm.nih.gov/34898969/">additive
+functional Cox regression</a></li>
+</ul>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

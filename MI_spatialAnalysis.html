@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+
+
+<title>Spatial analysis of multiplex imaging data</title>
+
+<script src="site_libs/header-attrs-2.21/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/flatly.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<link href="site_libs/font-awesome-6.2.1/css/all.min.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-6.2.1/css/v4-shims.min.css" rel="stylesheet" />
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">Analysis of multiplex single-cell imaging data in R</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+    Short Course
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="MI_Data.html">Data Download</a>
+    </li>
+    <li>
+      <a href="MI_intro.html">Background on multiplex single-cell imaging</a>
+    </li>
+    <li>
+      <a href="MI_VectraPolarisData.html">VectraPolarisData package</a>
+    </li>
+    <li>
+      <a href="MI_normalization.html">Segmentation, normalization, and phenotyping</a>
+    </li>
+    <li>
+      <a href="MI_spatialAnalysis.html">Extracting spatial summary statistics</a>
+    </li>
+    <li>
+      <a href="MI_fda.html">Modeling patient-level outcomes</a>
+    </li>
+  </ul>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+  <a href="about.html">About</a>
+</li>
+<li>
+  <a href="https://github.com/julia-wrobel/MI_tutorial">
+    <span class="fa fa-github fa-lg"></span>
+     
+  </a>
+</li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Spatial analysis of multiplex imaging
+data</h1>
+
+</div>
+
+
+<div id="slide-deck" class="section level2">
+<h2>Slide Deck</h2>
+<iframe class="speakerdeck-iframe" frameborder="0" src="https://speakerdeck.com/player/034999f5e7844fb9a3e778d055b3bedc" title="MI_spatialAnalysis" allowfullscreen="true" style="border: 0px; background: padding-box padding-box rgba(0, 0, 0, 0.1); margin: 0px; padding: 0px; border-radius: 6px; box-shadow: rgba(0, 0, 0, 0.2) 0px 5px 40px; width: 100%; height: auto; aspect-ratio: 560 / 314;" data-ratio="1.78343949044586">
+</iframe>
+</div>
+<div id="overview" class="section level2">
+<h2>Overview</h2>
+<p>This module focuses on extracting spatial summary metrics from
+multiplex imaging data.</p>
+<p>Load data and libraries.</p>
+<pre class="r"><code>library(tidyverse)
+library(patchwork)
+
+# load processed ovarian cancer data
+load(url(&quot;https://github.com/julia-wrobel/MI_tutorial/raw/main/Data/ovarian.RDA&quot;))</code></pre>
+<div id="visualize-point-patterns" class="section level3">
+<h3>Visualize point patterns</h3>
+<p>Below we visualize a point pattern for a single subject from the
+ovarian cancer dataset.</p>
+<ul>
+<li>pink: stroma area</li>
+<li>light green: tumor area</li>
+<li>dark green: macrophages</li>
+<li>purple: B-cells</li>
+</ul>
+<pre class="r"><code>
+# subset to a single subject
+subj_df = filter(ovarian_df, sample_id == 7) 
+
+# 7, 110, 34
+# plot macrophage and B-cells
+all = subj_df %&gt;%
+  ggplot(aes(x, y)) +
+  geom_point(aes(color = tissue_category),
+             size = 0.1, alpha = 0.7) +
+  scale_color_manual(values = c(&quot;pink&quot;, &quot;lightgreen&quot;)) +
+  geom_point(data = filter(subj_df,  phenotype_cd68 == &quot;CD68+&quot;), 
+             color = &quot;darkgreen&quot;, size = .5, shape = 4) +
+    geom_point(data = filter(subj_df,  phenotype_cd19 == &quot;CD19+&quot;), 
+             color = &quot;purple&quot;, size = .5, shape = 6) +
+  theme(legend.position =&quot;bottom&quot;)
+  
+cell_subset = subj_df %&gt;%
+  ggplot(aes(x, y)) +
+  geom_point(data = filter(subj_df,  phenotype_cd68 == &quot;CD68+&quot;), 
+             color = &quot;darkgreen&quot;, size = .5, shape = 4) +
+    geom_point(data = filter(subj_df,  phenotype_cd19 == &quot;CD19+&quot;), 
+             color = &quot;purple&quot;, size = .5, shape = 6) +
+  theme(legend.position =&quot;bottom&quot;)
+
+all + cell_subset</code></pre>
+<p><img src="MI_spatialAnalysis_files/figure-html/point_pattern-1.png" width="90%" /></p>
+</div>
+</div>
+<div id="analysis-using-spatstat-package" class="section level2">
+<h2>Analysis using spatstat package</h2>
+<p>The <code>spatstat</code> package in <code>R</code> has great
+resources for analyzing spatial point patterns. Let’s use the image
+above to do some exploratory analysis with spatstat.</p>
+<p>We will do spatial analysis on the distribution of B-cells and
+macrophages, so we subset to only these cell types, and create a
+<code>phenotype</code> variable that designates whether a cell is a B
+cell or a macrophage. Then we create a <code>ppp</code> object, which is
+what the <code>spatstat</code> package uses for storage and analysis of
+point pattern data.</p>
+<pre class="r"><code>library(spatstat)
+
+subj_df = subj_df %&gt;%
+  # create a phenotype variable that is B-cell, macrophage, or other
+  mutate(phenotype = case_when(
+    phenotype_cd68 == &quot;CD68+&quot; ~ &quot;macrophage&quot;,
+    phenotype_cd19 == &quot;CD19+&quot; ~ &quot;B-cell&quot;,
+    TRUE ~ &quot;other&quot;
+  )) %&gt;%
+  filter(phenotype != &quot;other&quot;) %&gt;%
+  select(x,y, immune, tissue_category, phenotype)
+
+# first define window of observation for your image
+w = convexhull.xy(subj_df$x,subj_df$y)
+
+# create ppp object as multitype point pattern
+# need to factor the marks variable for ppp object to be treated as a multitype point pattern
+ovarian_pp = ppp(subj_df$x,subj_df$y, window = w,
+                 marks = factor(subj_df$phenotype))</code></pre>
+<div id="univariate-ripleys-k" class="section level3">
+<h3>Univariate Ripley’s K</h3>
+<p>First we calculate Ripley’s K for B cells.</p>
+<pre class="r"><code>k_bcell =  Kest(subset(ovarian_pp, marks == &quot;B-cell&quot;), correction = &quot;isotropic&quot;)</code></pre>
+<p>We can plot this <code>k_bcell</code> object using
+<code>spatstat</code> to visualize the estimated K (<span
+class="math inline">\(\hat{K}^{iso}\)</span>) compared to the K under
+CSR (<span class="math inline">\(K^{pois}\)</span>).</p>
+<pre class="r"><code>plot(k_bcell)</code></pre>
+<p><img src="MI_spatialAnalysis_files/figure-html/unnamed-chunk-5-1.png" width="90%" /></p>
+<p>Now visualize the K-function for macrophages in this image:</p>
+<pre class="r"><code>k_mac =  Kest(subset(ovarian_pp, marks == &quot;macrophage&quot;), 
+              correction = &quot;isotropic&quot;)
+plot(k_mac)</code></pre>
+<p><img src="MI_spatialAnalysis_files/figure-html/unnamed-chunk-6-1.png" width="90%" /></p>
+<p>It appears that there is some degree of clustering for both B-cells
+and macrophages in this image. Are these statistically significant?</p>
+<p>We can test this using the <code>envelope</code> function, which
+performs Monte Carlo simulations of the K function under CSR. Plot below
+shows pointwise envelope for B-cell K-function. Pointwise means that
+these are performed separately for each value of <em>r</em>. Can only be
+interpreted if a specific value of <em>r</em> is chosen in advance.</p>
+<pre class="r"><code>
+e_test = envelope(subset(ovarian_pp, marks == &quot;B-cell&quot;), 
+               Kest, correction = &quot;isotropic&quot;)
+## Generating 99 simulations of CSR  ...
+## 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+## 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80,
+## 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98,  99.
+## 
+## Done.
+
+plot(e_test)</code></pre>
+<p><img src="MI_spatialAnalysis_files/figure-html/unnamed-chunk-7-1.png" width="90%" /></p>
+<p>Points outside the envelope indicate significant departure from CSR.
+Note that this could be due to inhomogeneity in the distribution of
+cells, or due to clustering. See <code>spatstat::Kinhom</code> function
+for a test that takes into account inhomogeneity. See
+<code>spatstat::Lest</code> function to compute the L-function.</p>
+</div>
+<div id="bivariate-ripleys-k" class="section level3">
+<h3>Bivariate Ripley’s K</h3>
+<p>The bivariate K function measures whether the spatial distribution of
+2 cell types is independent. Deviation from the <span
+class="math inline">\(K^{pois}\)</span> line suggests a spatial
+relationship between the B-cells and macrophages in the image.</p>
+<pre class="r"><code>k_biv = Kcross(ovarian_pp, &quot;B-cell&quot;, &quot;macrophage&quot;, correction = &quot;isotropic&quot;)
+
+plot(k_biv)</code></pre>
+<p><img src="MI_spatialAnalysis_files/figure-html/unnamed-chunk-8-1.png" width="90%" /></p>
+</div>
+<div id="nearest-neighbor-g-function" class="section level3">
+<h3>Nearest neighbor G function</h3>
+<p>Can interpret as probability of a neighboring cell occurring within
+radius r.</p>
+<pre class="r"><code>G_bcell = Gest(subset(ovarian_pp, marks == &quot;B-cell&quot;), correction = &quot;rs&quot;)
+
+plot(G_bcell)</code></pre>
+<p><img src="MI_spatialAnalysis_files/figure-html/unnamed-chunk-9-1.png" width="90%" /></p>
+<p>Its bivariate counterpart</p>
+<pre class="r"><code>G_biv = Gcross(ovarian_pp, correction = &quot;rs&quot;)
+
+plot(G_biv)</code></pre>
+<p><img src="MI_spatialAnalysis_files/figure-html/unnamed-chunk-10-1.png" width="90%" /></p>
+</div>
+</div>
+<div id="spatialtime-package" class="section level2">
+<h2>SpatialTIME package</h2>
+<p>Organize data for use in the <code>spatialTIME</code> package.</p>
+<pre class="r"><code>library(spatialTIME)
+
+# subsetting to 2 subjects for faster computation and ease of visualization
+ids = c( 7, 128)
+
+spatial_ls = filter(ovarian_df, sample_id %in% ids) %&gt;%
+    mutate(XMax = x, XMin = x,
+         YMax = y, YMin = y,
+         sample_id = factor(sample_id),
+         id = sample_id,
+         cd19 = ifelse(phenotype_cd19 == &quot;CD19+&quot;, 1, 0),
+         cd3 = ifelse(phenotype_cd3 == &quot;CD3+&quot;, 1, 0),
+         cd8 = ifelse(phenotype_cd8 == &quot;CD8+&quot;, 1, 0),
+         cd68 = ifelse(phenotype_cd68 == &quot;CD68+&quot;, 1, 0)) %&gt;%
+  dplyr::select(sample_id, id, XMax, XMin, YMax, YMin, 
+                cd19, cd3, cd8, cd68, tissue_category) %&gt;%
+  nest_by(id)
+
+# define clinical data
+clinical_data = ovarian_df %&gt;%
+  dplyr::select(sample_id, survival_time, death, stage_bin, BRCA_mutation) %&gt;%
+  distinct() %&gt;%
+  mutate(id = sample_id)
+
+sample_data = ovarian_df %&gt;%
+  group_by(sample_id) %&gt;%
+  summarize(total_cells = n()) %&gt;%
+  ungroup() %&gt;%
+  mutate(id = sample_id)
+
+  
+df_spatialTIME = spatialTIME::create_mif(
+  clinical_data = clinical_data,
+  sample_data = sample_data,
+  spatial_list = spatial_ls$data,
+  patient_id = &quot;id&quot;,
+  sample_id = &quot;sample_id&quot;
+           )
+
+rm(spatial_ls)</code></pre>
+<p>Plotting samples</p>
+<pre class="r"><code>
+cell_types = c(&quot;cd68&quot;, &quot;cd19&quot;)
+values =  RColorBrewer::brewer.pal(length(cell_types), &quot;Accent&quot;)
+
+
+#add an element in the `derived` object position
+df_spatialTIME &lt;- plot_immunoflo(df_spatialTIME, 
+                   plot_title = &quot;sample_id&quot;,  mnames = cell_types,
+                   cell_type = &quot;tissue_category&quot;)
+</code></pre>
+<p>Calculate spatial summary metrics (calculating univariate K function
+across samples and phenotypes).</p>
+<pre class="r"><code>df_spatialTIME &lt;- ripleys_k(mif = df_spatialTIME, 
+                            mnames = cell_types, 
+                            method = &quot;K&quot;,
+                            r_range = seq(0, 300, 10),
+                            edge_correction = &#39;translation&#39;
+                            #permute = TRUE,
+                            #num_permutations = 100
+                            )</code></pre>
+<p>Plot images(top row) and K functions (bottom row).</p>
+<pre class="r"><code>
+k_funs = df_spatialTIME$derived$univariate_Count  %&gt;%
+  janitor::clean_names() %&gt;%
+  ggplot(aes(x = r, y = observed_k)) +
+  geom_line(aes(group = marker, 
+             color = marker)) +
+  geom_line(aes(r, theoretical_csr), linetype = 2) +
+  facet_wrap(~sample_id, scales = &#39;free&#39;, nrow = 1) + theme_bw() +
+  theme(legend.position = &quot;bottom&quot;) +
+  scale_color_manual(values = values)
+
+
+imgs = patchwork::wrap_plots(df_spatialTIME$derived$spatial_plots, nrow = 1)
+
+imgs / k_funs</code></pre>
+<p><img src="MI_spatialAnalysis_files/figure-html/unnamed-chunk-14-1.png" width="90%" /></p>
+<p>Also allows for calculation of bivariate K, univariate and bivariate
+L, G, with and without permutations.</p>
+</div>
+<div id="references" class="section level2">
+<h2>References</h2>
+<ul>
+<li><a href="https://spatstat.org/book.html">Textbook for spatstat
+package</a></li>
+<li><a href="https://www.jstatsoft.org/article/view/v012i06">spatstat
+JSS article</a></li>
+<li><a
+href="https://aacrjournals.org/mcr/article/19/12/1973/675069/The-Spatial-Context-of-Tumor-Infiltrating-Immune">Paper
+for ovarian cancer data</a></li>
+<li><a
+href="https://academic.oup.com/bioinformatics/article/37/23/4584/6420699">paper
+for spatialTIME package</a> and associated <a
+href="https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1009900">methods
+paper</a></li>
+<li><a
+href="https://link.springer.com/protocol/10.1007/978-1-0716-2986-4_8">textbook
+chapter, Wrobel and Vandekar</a></li>
+<li><a href="https://www.mdpi.com/2072-6694/13/12/3031">Challenges and
+Opportunities in the Statistical Analysis of Multiplex
+Immunofluorescence Data</a></li>
+<li><a
+href="https://academic.oup.com/bioinformatics/article/37/10/1452/6020255">Chervoneva,
+2022</a></li>
+</ul>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

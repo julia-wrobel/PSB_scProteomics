@@ -1,0 +1,29 @@
+name: "Shortcourse on multiplex imaging data"
+output_dir: "."
+navbar:
+  title: "Analysis of multiplex single-cell imaging data in R"
+  left:
+    - text: "Home"
+      href: index.html
+    - text: "Short Course"
+      menu:
+        - text: "Data Download"
+          href: MI_Data.html
+        - text: "Background on multiplex single-cell imaging"
+          href: MI_intro.html
+        - text: "VectraPolarisData package"
+          href: MI_VectraPolarisData.html
+        - text: "Segmentation, normalization, and phenotyping"
+          href: MI_normalization.html
+        - text: "Extracting spatial summary statistics"
+          href: MI_spatialAnalysis.html
+        - text: "Modeling patient-level outcomes"
+          href: MI_fda.html
+  right:
+    - text: "About"
+      href: about.html
+    - icon: fa-github fa-lg
+      href: https://github.com/julia-wrobel/MI_tutorial
+output:
+  html_document:
+    theme: flatly

@@ -1,0 +1,233 @@
+---
+title: "Statistical image processing: segmentation, phenotyping, and normalization"
+output:
+  html_document: 
+    toc: true
+    toc_float: true
+---
+
+
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%",
+  message = FALSE,
+  warning = FALSE
+)
+
+```
+
+
+
+
+## Slide Deck
+
+<iframe class="speakerdeck-iframe" frameborder="0" src="https://speakerdeck.com/player/ccecd0548b874505b4bdd80172769ffe" title="MI_normalization" allowfullscreen="true" style="border: 0px; background: padding-box padding-box rgba(0, 0, 0, 0.1); margin: 0px; padding: 0px; border-radius: 6px; box-shadow: rgba(0, 0, 0, 0.2) 0px 5px 40px; width: 100%; height: auto; aspect-ratio: 560 / 314;" data-ratio="1.78343949044586"></iframe>
+
+
+## Overview
+
+This module performs and evaluates intensity normalization on images from the lung cancer dataset using the `mxnorm` package.
+
+Load data and libraries.
+
+```{r}
+library(tidyverse)
+library(viridis)
+library(patchwork)
+
+# load processed lung cancer data
+load(url("https://github.com/julia-wrobel/MI_tutorial/raw/main/Data/lung.RDA"))
+
+# for computational reasons, I will perform on a subset of the data with 20 subjects
+ids = sample(unique(lung_df$patient_id), 20)
+lung_df  = lung_df %>% filter(patient_id %in% ids)
+```
+
+
+
+## Normalization
+
+We will use the `mxnorm` package to normalize the lung data. More examples for working with this package are available in the [package vignette](https://cran.r-project.org/web/packages/mxnorm/vignettes/mxnorm-vignette.html).
+
+### Setting up `mx_dataset` object
+
+The `mxnorm` package uses an S3 object-oriented framework in R to define an mx_dataset which all operations are performed on.
+
+* Use `patient_id` as slide identifier
+* Use `image_id` as image identifier
+* Use the following marker columns:
+  * `cd19`
+  * `cd14`
+  * `cd3`
+  * `cd8`
+  * `hladr`
+  * `ck`
+  * `dapi`
+* Use `tissue_category` as a metadata column
+
+
+```{r}
+# load the package
+# install.packages("mxnorm")
+library(mxnorm)
+
+# define the mx_dataset
+mx_data = mx_dataset(data = lung_df,
+                     slide_id = "patient_id",
+                     image_id = "image_id",
+                     marker_cols = c("cd19",
+                                     "cd3",
+                                     "cd14",
+                                     "cd8",
+                                     "hladr",
+                                     "ck",
+                                     "dapi"
+                                     ),
+                     metadata_cols = c("tissue_category"))
+
+
+class(mx_data)
+summary(mx_data)
+```
+
+
+
+### Normalize using `mx_normalize()`
+
+Here we normalize using the transformation: `log10mean_divide`. Then, we calculate Otsu discordance metrics.
+
+
+```{r mxnorm}
+mx_norm = mx_normalize(mx_data,
+                       transform = "log10_mean_divide",
+                       method = "None")
+
+
+# Otsu
+mx_norm = run_otsu_discordance(mx_norm,
+                            table="both",
+                            plot_out = FALSE)
+
+```
+
+
+Summary table that calculates the metrics from the Bioinformatics paper is printed below:
+
+```{r mxnorm_stats}
+# calculate metrics for unnormalized and normalized data
+summary(mx_norm)
+```
+
+Lower values of these metrics indicate better normalization.
+
+### Plotting
+
+First, density plots. The code below constructs density plots of normalized and unnormalized CD14 values for 3 subjects.
+
+```{r density_mxnorm}
+set.seed(103001)
+ids = sample(unique(lung_df$patient_id), 3)
+markers = c("cd19", "cd14")
+
+mx_df = mx_norm$data %>%
+  mutate(cd14_norm = mx_norm$norm_data$cd14) %>%
+  dplyr::select(patient_id, image_id, cd14, cd14_norm) %>%
+  pivot_longer(cd14:cd14_norm, 
+               names_to = "marker", 
+               values_to = "marker_value") %>%
+  filter(patient_id %in% ids)
+  
+  
+mx_df %>% 
+  ggplot() +
+  geom_line(stat = "density", aes(marker_value, group = image_id, 
+                                  color = patient_id), 
+            alpha=0.5, linetype = 2) +
+    geom_density(aes(marker_value, group = patient_id,
+                   color = patient_id), size = 1.25) +
+  scale_color_viridis(discrete = TRUE) +
+  facet_wrap(~marker) +
+  #theme(legend.position = "none") +
+  xlim(0, 1) +
+  labs(x = "")
+
+
+```
+
+
+The next set of plots shows Otsu discordance scores. Otsu thresholds were calculated at
+the slide-level for each marker and compared to a global Otsu threshold for each
+marker to calculate a discordance score.
+
+Discordance scores are plotted for all 20 subjects and 6 markers, both before and after normalization. The white diamond represents the mean discordance score across all
+markers for a given method. Given that this is a discordance score, lower values indicate better agreement across slides.
+
+```{r discordance_mxnorm}
+
+otsu_data = mx_norm$otsu_data %>%
+  filter(marker %in% c("cd14", "cd19", "cd8", "cd3", "dapi", "ck")) %>%
+  mutate(slide_id = as.numeric(factor(slide_id)),
+         norm = factor(table, levels = c("raw", "normalized"))) 
+
+point_size = 2
+    
+
+mean_vals = otsu_data %>% 
+  group_by(norm, slide_id) %>% 
+  summarize(m1 = mean(discordance_score), .groups = "drop")
+        
+
+otsu_data %>%
+  ggplot() + 
+  geom_point(aes(discordance_score, slide_id, color = marker), size = point_size) +
+  facet_wrap(~ norm) +
+  geom_point(data = mean_vals, aes(m1, slide_id), color = "black", fill = "white", 
+             shape = 23, size = point_size) +
+  labs(x = "discordance score", y = "slide_id")
+
+```
+
+
+
+It is also possible to evaluate user-defined normalization using the `mxnorm` package. See [here](https://cran.r-project.org/web/packages/mxnorm/vignettes/mxnorm-vignette.html#user-defined-normalization) in the package vignette for an example.
+
+
+## References
+
+* [textbook chapter, Wrobel and Vandekar](http://juliawrobel.com/Downloads/mIF_chapter.pdf)
+* [Challenges and Opportunities in the Statistical Analysis of Multiplex Immunofluorescence Data](https://www.mdpi.com/2072-6694/13/12/3031)
+
+### Segmentation
+
+* [Mesmer deep learning based cell segmentation](https://pubmed.ncbi.nlm.nih.gov/34795433/)
+* [Two-stage R-CNN](https://www.nature.com/articles/s41598-022-08355-1)
+* [Cell Profiler](https://genomebiology.biomedcentral.com/articles/10.1186/gb-2006-7-10-r100)
+* [ilastik](https://www.ilastik.org/)
+* [Halo (proprietary) software](https://indicalab.com/halo/)
+* [inForm (proprietary) software](https://www.akoyabio.com/phenoimager/software/inform-tissue-finder/)
+
+
+### Phenotyping
+
+* [Astir](https://www.sciencedirect.com/science/article/pii/S2405471221003355)
+* [Evaluation of clustering algorithms on Vectra and MIBI data](https://bmcresnotes.biomedcentral.com/articles/10.1186/s13104-022-06097-x)
+* [MAUI phenotyping for MIBI images](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1008887)
+* [CU-Anschutz pixel-based platform independent phenotyping](https://www.biorxiv.org/content/10.1101/2022.10.20.510630v1.full.pdf)
+* [CELESTA, nature methods](https://pubmed.ncbi.nlm.nih.gov/35654951/)
+* [Gamma mixture models for phenotyping](https://arxiv.org/abs/2110.13074)
+
+### Normalization
+
+
+* [Python-based pipeline](https://www.nature.com/articles/s42003-022-03368-y)
+* [mxnorm package](https://joss.theoj.org/papers/10.21105/joss.04180.pdf) 
+* [Methods behind mxnorm](https://academic.oup.com/bioinformatics/article/38/6/1700/6496920)
+
+### Analysis of functional markers
+
+* [Spatial differential expression](https://www.nature.com/articles/s41592-022-01575-3)
+* [Density variation analsyis of functional markers](https://academic.oup.com/bioinformaticsadvances/article/2/1/vbac039/6590640) 

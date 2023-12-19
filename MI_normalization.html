@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+
+
+<title>Statistical image processing: segmentation, phenotyping, and normalization</title>
+
+<script src="site_libs/header-attrs-2.21/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/flatly.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<link href="site_libs/font-awesome-6.2.1/css/all.min.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-6.2.1/css/v4-shims.min.css" rel="stylesheet" />
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">Analysis of multiplex single-cell imaging data in R</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+    Short Course
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="MI_Data.html">Data Download</a>
+    </li>
+    <li>
+      <a href="MI_intro.html">Background on multiplex single-cell imaging</a>
+    </li>
+    <li>
+      <a href="MI_VectraPolarisData.html">VectraPolarisData package</a>
+    </li>
+    <li>
+      <a href="MI_normalization.html">Segmentation, normalization, and phenotyping</a>
+    </li>
+    <li>
+      <a href="MI_spatialAnalysis.html">Extracting spatial summary statistics</a>
+    </li>
+    <li>
+      <a href="MI_fda.html">Modeling patient-level outcomes</a>
+    </li>
+  </ul>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+  <a href="about.html">About</a>
+</li>
+<li>
+  <a href="https://github.com/julia-wrobel/MI_tutorial">
+    <span class="fa fa-github fa-lg"></span>
+     
+  </a>
+</li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Statistical image processing: segmentation,
+phenotyping, and normalization</h1>
+
+</div>
+
+
+<div id="slide-deck" class="section level2">
+<h2>Slide Deck</h2>
+<iframe class="speakerdeck-iframe" frameborder="0" src="https://speakerdeck.com/player/ccecd0548b874505b4bdd80172769ffe" title="MI_normalization" allowfullscreen="true" style="border: 0px; background: padding-box padding-box rgba(0, 0, 0, 0.1); margin: 0px; padding: 0px; border-radius: 6px; box-shadow: rgba(0, 0, 0, 0.2) 0px 5px 40px; width: 100%; height: auto; aspect-ratio: 560 / 314;" data-ratio="1.78343949044586">
+</iframe>
+</div>
+<div id="overview" class="section level2">
+<h2>Overview</h2>
+<p>This module performs and evaluates intensity normalization on images
+from the lung cancer dataset using the <code>mxnorm</code> package.</p>
+<p>Load data and libraries.</p>
+<pre class="r"><code>library(tidyverse)
+library(viridis)
+library(patchwork)
+
+# load processed lung cancer data
+load(url(&quot;https://github.com/julia-wrobel/MI_tutorial/raw/main/Data/lung.RDA&quot;))
+
+# for computational reasons, I will perform on a subset of the data with 20 subjects
+ids = sample(unique(lung_df$patient_id), 20)
+lung_df  = lung_df %&gt;% filter(patient_id %in% ids)</code></pre>
+</div>
+<div id="normalization" class="section level2">
+<h2>Normalization</h2>
+<p>We will use the <code>mxnorm</code> package to normalize the lung
+data. More examples for working with this package are available in the
+<a
+href="https://cran.r-project.org/web/packages/mxnorm/vignettes/mxnorm-vignette.html">package
+vignette</a>.</p>
+<div id="setting-up-mx_dataset-object" class="section level3">
+<h3>Setting up <code>mx_dataset</code> object</h3>
+<p>The <code>mxnorm</code> package uses an S3 object-oriented framework
+in R to define an mx_dataset which all operations are performed on.</p>
+<ul>
+<li>Use <code>patient_id</code> as slide identifier</li>
+<li>Use <code>image_id</code> as image identifier</li>
+<li>Use the following marker columns:
+<ul>
+<li><code>cd19</code></li>
+<li><code>cd14</code></li>
+<li><code>cd3</code></li>
+<li><code>cd8</code></li>
+<li><code>hladr</code></li>
+<li><code>ck</code></li>
+<li><code>dapi</code></li>
+</ul></li>
+<li>Use <code>tissue_category</code> as a metadata column</li>
+</ul>
+<pre class="r"><code># load the package
+# install.packages(&quot;mxnorm&quot;)
+library(mxnorm)
+
+# define the mx_dataset
+mx_data = mx_dataset(data = lung_df,
+                     slide_id = &quot;patient_id&quot;,
+                     image_id = &quot;image_id&quot;,
+                     marker_cols = c(&quot;cd19&quot;,
+                                     &quot;cd3&quot;,
+                                     &quot;cd14&quot;,
+                                     &quot;cd8&quot;,
+                                     &quot;hladr&quot;,
+                                     &quot;ck&quot;,
+                                     &quot;dapi&quot;
+                                     ),
+                     metadata_cols = c(&quot;tissue_category&quot;, 
+                                       &quot;phenotype_ck&quot;, 
+                                       &quot;phenotype_cd8&quot;, 
+                                       &quot;phenotype_cd14&quot;,
+                                       &quot;phenotype_other&quot;, 
+                                       &quot;phenotype_cd19&quot;))
+
+
+class(mx_data)
+## [1] &quot;mx_dataset&quot;
+summary(mx_data)
+## Call:
+## `mx_dataset` object with 20 slide(s), 7 marker column(s), and 6 metadata column(s)</code></pre>
+</div>
+<div id="normalize-using-mx_normalize" class="section level3">
+<h3>Normalize using <code>mx_normalize()</code></h3>
+<p>Here we normalize using the transformation:
+<code>log10mean_divide</code>. Then, we calculate Otsu discordance
+metrics.</p>
+<pre class="r"><code>mx_norm = mx_normalize(mx_data,
+                       transform = &quot;log10_mean_divide&quot;,
+                       method = &quot;None&quot;)
+
+
+# Otsu
+mx_norm = run_otsu_discordance(mx_norm,
+                            table=&quot;both&quot;,
+                            plot_out = FALSE)</code></pre>
+<p>Summary table that calculates the metrics from the Bioinformatics
+paper is printed below:</p>
+<pre class="r"><code># calculate metrics for unnormalized and normalized data
+summary(mx_norm)
+## Call:
+## `mx_dataset` object with 20 slide(s), 7 marker column(s), and 6 metadata column(s)
+## 
+## Normalization:
+## Data normalized with transformation=`log10_mean_divide` and method=`None`
+## 
+## Anderson-Darling tests:
+##       table mean_test_statistic mean_std_test_statistic mean_p_value
+##  normalized              81.924                  19.064            0
+##         raw             196.099                  53.654            0
+## 
+## Threshold discordance scores:
+##       table mean_discordance sd_discordance
+##  normalized            0.047          0.051
+##         raw            0.103          0.105</code></pre>
+<p>Lower values of these metrics indicate better normalization.</p>
+</div>
+<div id="plotting" class="section level3">
+<h3>Plotting</h3>
+<p>First, density plots. The code below constructs density plots of
+normalized and unnormalized CD14 values for 3 subjects.</p>
+<pre class="r"><code>set.seed(103001)
+ids = sample(unique(lung_df$patient_id), 3)
+markers = c(&quot;cd19&quot;, &quot;cd14&quot;)
+
+mx_df = mx_norm$data %&gt;%
+  mutate(cd14_norm = mx_norm$norm_data$cd14) %&gt;%
+  dplyr::select(patient_id, image_id, cd14, cd14_norm) %&gt;%
+  pivot_longer(cd14:cd14_norm, 
+               names_to = &quot;marker&quot;, 
+               values_to = &quot;marker_value&quot;) %&gt;%
+  filter(patient_id %in% ids)
+  
+  
+mx_df %&gt;% 
+  ggplot() +
+  geom_line(stat = &quot;density&quot;, aes(marker_value, group = image_id, 
+                                  color = patient_id), 
+            alpha=0.5, linetype = 2) +
+    geom_density(aes(marker_value, group = patient_id,
+                   color = patient_id), size = 1.25) +
+  scale_color_viridis(discrete = TRUE) +
+  facet_wrap(~marker) +
+  #theme(legend.position = &quot;none&quot;) +
+  xlim(0, 1) +
+  labs(x = &quot;&quot;)</code></pre>
+<p><img src="MI_normalization_files/figure-html/density_mxnorm-1.png" width="90%" /></p>
+<p>The next set of plots shows Otsu discordance scores. Otsu thresholds
+were calculated at the slide-level for each marker and compared to a
+global Otsu threshold for each marker to calculate a discordance
+score.</p>
+<p>Discordance scores are plotted for all 20 subjects and 6 markers,
+both before and after normalization. The white diamond represents the
+mean discordance score across all markers for a given method. Given that
+this is a discordance score, lower values indicate better agreement
+across slides.</p>
+<pre class="r"><code>
+otsu_data = mx_norm$otsu_data %&gt;%
+  filter(marker %in% c(&quot;cd14&quot;, &quot;cd19&quot;, &quot;cd8&quot;, &quot;cd3&quot;, &quot;dapi&quot;, &quot;ck&quot;)) %&gt;%
+  mutate(slide_id = as.numeric(factor(slide_id)),
+         norm = factor(table, levels = c(&quot;raw&quot;, &quot;normalized&quot;))) 
+
+point_size = 2
+    
+
+mean_vals = otsu_data %&gt;% 
+  group_by(norm, slide_id) %&gt;% 
+  summarize(m1 = mean(discordance_score), .groups = &quot;drop&quot;)
+        
+
+otsu_data %&gt;%
+  ggplot() + 
+  geom_point(aes(discordance_score, slide_id, color = marker), size = point_size) +
+  facet_wrap(~ norm) +
+  geom_point(data = mean_vals, aes(m1, slide_id), color = &quot;black&quot;, fill = &quot;white&quot;, 
+             shape = 23, size = point_size) +
+  labs(x = &quot;discordance score&quot;, y = &quot;slide_id&quot;)</code></pre>
+<p><img src="MI_normalization_files/figure-html/discordance_mxnorm-1.png" width="90%" /></p>
+<p>It is also possible to evaluate user-defined normalization using the
+<code>mxnorm</code> package. See <a
+href="https://cran.r-project.org/web/packages/mxnorm/vignettes/mxnorm-vignette.html#user-defined-normalization">here</a>
+in the package vignette for an example.</p>
+</div>
+</div>
+<div id="references" class="section level2">
+<h2>References</h2>
+<ul>
+<li><a href="http://juliawrobel.com/Downloads/mIF_chapter.pdf">textbook
+chapter, Wrobel and Vandekar</a></li>
+<li><a href="https://www.mdpi.com/2072-6694/13/12/3031">Challenges and
+Opportunities in the Statistical Analysis of Multiplex
+Immunofluorescence Data</a></li>
+</ul>
+<div id="segmentation" class="section level3">
+<h3>Segmentation</h3>
+<ul>
+<li><a href="https://pubmed.ncbi.nlm.nih.gov/34795433/">Mesmer deep
+learning based cell segmentation</a></li>
+<li><a
+href="https://www.nature.com/articles/s41598-022-08355-1">Two-stage
+R-CNN</a></li>
+<li><a
+href="https://genomebiology.biomedcentral.com/articles/10.1186/gb-2006-7-10-r100">Cell
+Profiler</a></li>
+<li><a href="https://www.ilastik.org/">ilastik</a></li>
+<li><a href="https://indicalab.com/halo/">Halo (proprietary)
+software</a></li>
+<li><a
+href="https://www.akoyabio.com/phenoimager/software/inform-tissue-finder/">inForm
+(proprietary) software</a></li>
+</ul>
+</div>
+<div id="phenotyping" class="section level3">
+<h3>Phenotyping</h3>
+<ul>
+<li><a
+href="https://www.sciencedirect.com/science/article/pii/S2405471221003355">Astir</a></li>
+<li><a
+href="https://bmcresnotes.biomedcentral.com/articles/10.1186/s13104-022-06097-x">Evaluation
+of clustering algorithms on Vectra and MIBI data</a></li>
+<li><a
+href="https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1008887">MAUI
+phenotyping for MIBI images</a></li>
+<li><a
+href="https://www.biorxiv.org/content/10.1101/2022.10.20.510630v1.full.pdf">CU-Anschutz
+pixel-based platform independent phenotyping</a></li>
+<li><a href="https://pubmed.ncbi.nlm.nih.gov/35654951/">CELESTA, nature
+methods</a></li>
+<li><a href="https://arxiv.org/abs/2110.13074">Gamma mixture models for
+phenotyping</a></li>
+</ul>
+</div>
+<div id="normalization-1" class="section level3">
+<h3>Normalization</h3>
+<ul>
+<li><a
+href="https://www.nature.com/articles/s42003-022-03368-y">Python-based
+pipeline</a></li>
+<li><a
+href="https://joss.theoj.org/papers/10.21105/joss.04180.pdf">mxnorm
+package</a></li>
+<li><a
+href="https://academic.oup.com/bioinformatics/article/38/6/1700/6496920">Methods
+behind mxnorm</a></li>
+</ul>
+</div>
+<div id="analysis-of-functional-markers" class="section level3">
+<h3>Analysis of functional markers</h3>
+<ul>
+<li><a href="https://www.nature.com/articles/s41592-022-01575-3">Spatial
+differential expression</a></li>
+<li><a
+href="https://academic.oup.com/bioinformaticsadvances/article/2/1/vbac039/6590640">Density
+variation analsyis of functional markers</a></li>
+</ul>
+</div>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

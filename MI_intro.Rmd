@@ -1,0 +1,172 @@
+---
+title: "Introduction to multiplex single-cell imaging data"
+output:
+  html_document: 
+    toc: true
+    toc_float: true
+---
+
+
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%",
+  message = FALSE
+)
+
+```
+
+
+
+
+## Slide Deck
+
+<iframe class="speakerdeck-iframe" frameborder="0" src="https://speakerdeck.com/player/19588e79e83146a8bc844ed2f335c79e" title="MI_intro" allowfullscreen="true" style="border: 0px; background: padding-box padding-box rgba(0, 0, 0, 0.1); margin: 0px; padding: 0px; border-radius: 6px; box-shadow: rgba(0, 0, 0, 0.2) 0px 5px 40px; width: 100%; height: auto; aspect-ratio: 560 / 314;" data-ratio="1.78343949044586"></iframe>
+
+
+## Overview
+
+In this module I briefly discuss loading and visualizing raw TIFF data. The rest of the workshop will focus on data in tabular form post segmentation.
+
+### Lung cancer data
+
+The following image is a single ROI from a tissue slice from a patient with non small cell lung carcinoma.Cell and tissue segmentation and cell phenotyping were performed using [inForm](https://www.akoyabio.com/phenoimager/software/inform-tissue-finder/) software. For each image, there are multiple Tiff files output by inForm:
+
+
+* `lung_component_data.tif`: the multichannel file we are most interested in
+* `lung_binary_seg_maps.tif`: 3 channel file with binary segmentation maps
+* `lung.tif`: A composite image in RGB format. 
+
+You can download these files from the Data tab and store them in a local directory. 
+
+```{r}
+
+#BiocManager::install("EBImage")
+
+# load relevant libraries
+library(tidyverse)
+library(tiff)
+library(EBImage)
+
+
+# define your specific file path
+my_path = "./Data/"
+
+# define file for different .tif files
+component = paste0(my_path, "lung_component_data.tif")
+binseg = paste0(my_path, "lung_binary_seg_maps.tif")
+composite_tif = paste0(my_path, "lung.tif")
+```
+
+
+#### Component file
+
+
+The `component.tif` file contains the multichannel tiff, which is a stack 0f individual images (one for each marker). Below I define a function to read the component file and extract metadata.
+
+```{r}
+# this function is from phenoptr package on GitHub
+# extracts metadata specific to Vectra3/VectraPolaris images
+read_components <- function(path) {
+  stopifnot(file.exists(path), endsWith(path, 'component_data.tif'))
+
+  # The readTIFF documentation for `as.is`` is misleading.
+  # To read actual float values for components, we want `as.is=FALSE`.
+  tif = tiff::readTIFF(path, all=TRUE, info=TRUE)
+
+  # Get the image descriptions and figure out which ones are components
+  infos = purrr::map_chr(tif, ~attr(., 'description'))
+  images = grepl('FullResolution', infos)
+
+  # Get the component names
+  names = stringr::str_match(infos[images], '<Name>(.*)</Name>')[, 2]
+
+  purrr::set_names(tif[images], names)
+}
+
+image_stack = read_components(component)
+```
+
+The `image_stack` object is now a list, where each list element is a different marker
+
+```{r}
+map(image_stack, dim)
+```
+
+
+I can use the `display()` function from the `EBImage` package to plot an individual channel. Below the DAPI (nucleus) channel is plotted.
+
+```{r}
+dapi_channel = t(image_stack$"DAPI (DAPI)")
+EBImage::display(dapi_channel, method = "raster")
+
+
+# plot the image in a specified color
+dapi = rgbImage(blue=.1*dapi_channel, red = .02 * dapi_channel)
+display(dapi, method = "raster")
+```
+
+#### Segmentation files
+
+This data was collected on a Vectra 3 instrument and segmented using [inForm](https://www.akoyabio.com/phenoimager/software/inform-tissue-finder/) tissue analysis     software from Akoya Biosciences. This is proprietary image analysis software that can perform cell and tissue segmentation and cell phenotyping. The segmentation below were performed by that software.
+
+```{r}
+# source phenoptr code for loading file and metadata, based on tiff::readTIFF.
+source("https://raw.githubusercontent.com/akoyabio/phenoptr/main/R/read_maps.R")
+
+segmentations = read_maps(binseg)
+names(segmentations)
+```
+
+Nucleus segmentation
+
+```{r}
+nucleus = segmentations[['Membrane']]
+plot(as.raster(nucleus, max = max(nucleus)))
+```
+
+
+Tissue segmentation
+
+```{r}
+tissue = segmentations[['Tissue']]
+
+plot(as.raster(tissue, max = max(tissue)))
+```
+
+#### Composite file
+
+```{r}
+# source phenoptr code for loading file and metadata, based on tiff::readTIFF.
+source("https://raw.githubusercontent.com/akoyabio/phenoptr/main/R/read_composites.R")
+
+composite = read_composites(composite_tif)
+```
+
+```{r}
+composite = as.raster(composite[[1]])
+plot(composite)
+```
+
+
+
+## References
+
+Below are original citations for the two example datasets I will be working with in this tutorial.
+
+* [Paper for ovarian cancer data](https://aacrjournals.org/mcr/article/19/12/1973/675069/The-Spatial-Context-of-Tumor-Infiltrating-Immune)
+* [Paper for non-small cell lung carcinoma data](https://pubmed.ncbi.nlm.nih.gov/34048945/)
+
+Resources from Akoya Biosciences on working with this data
+
+* [phenoptr R package](https://akoyabio.github.io/phenoptr/)
+
+Below are some references that review this rapidly growing area.
+
+* [textbook chapter, Wrobel and Vandekar](http://juliawrobel.com/Downloads/mIF_chapter.pdf)
+* [Challenges and Opportunities in the Statistical Analysis of Multiplex Immunofluorescence Data](https://www.mdpi.com/2072-6694/13/12/3031)
+* [Catching up with multiplexed tissue imaging](https://www.nature.com/articles/s41592-022-01428-z) 
+* [The emerging landscape of spatial profiling technologies](https://www.nature.com/articles/s41576-022-00515-3)
