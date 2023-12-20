@@ -2,20 +2,31 @@
 title: "About This Website"
 ---
 
-This is an [R Markdown website](http://rmarkdown.rstudio.com/rmarkdown_websites.html), created by [Julia Wrobel](http://juliawrobel.com) for a multiplex single-cell imaging data workshop at the University of Michigan Department of Biostatistics.
+This is an [R Markdown website](http://rmarkdown.rstudio.com/rmarkdown_websites.html), created by [Julia Wrobel](http://juliawrobel.com) for a single-cell spatial proteomics and multiplex imaging data workshop at the 2024 [Pacific Symposium on Biocomputing (PSB)](https://psb.stanford.edu/). For raw materials, go to the [GitHub repository for this website](https://github.com/julia-wrobel/PSB_scProteomics).
 
-In the short course, we'll actively use several packages which are listed below. Code to install the packages follows, and version information about each of these packages and their dependencies is at the bottom of this page.
+In the short course, we will use several packages which are listed below. Code to install the packages follows, and version information about each of these packages and their dependencies is at the bottom of this page.
 
 Installing packages from CRAN
 
 ```{r, eval=FALSE}
 # main packages
-install.packages(c("tidyverse", "spatstat", "spatialTIME", "mxnorm","refund",
-                   "refund.shiny", "tiff", "survival"))
+install.packages(c("tidyverse", "spatstat", "spatialTIME", "mxnorm","survival", "scSpatialSim"))
 
 # additional packages used for visualization
 install.packages(c("viridis", "patchwork"))
 ```
+
+Installing packages from GitHub
+
+```{r, eval = FALSE}
+# install devtools
+install.packages("devtools")
+
+# mxfda
+devtools::install_github("julia-wrobel/mxfda")
+```
+
+
 
 Installing packages from Bioconductor
 
@@ -25,9 +36,6 @@ BiocManager::install(version = "3.16")
 
 # VectraPolarisData
 BiocManager::install("VectraPolarisData")
-
-# EBImage
-BiocManager::install("EBImage")
 ```
 
 
@@ -35,6 +43,6 @@ BiocManager::install("EBImage")
 Versions of key packages:
 
 ```{r}
-devtools::session_info(c("tidyverse", "VectraPolarisData", "spatstat", "spatialTIME", "refund"))
+devtools::session_info(c("tidyverse", "VectraPolarisData", "spatstat", "spatialTIME", "mxfda"))
 ```
 

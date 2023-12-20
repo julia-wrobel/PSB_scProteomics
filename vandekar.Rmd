@@ -1,5 +1,5 @@
 ---
-title: "Modeling patient-level outcomes"
+title: "Normalization and Cell Phenotyping for mIF data "
 output:
   html_document: 
     toc: true

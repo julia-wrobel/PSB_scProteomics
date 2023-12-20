@@ -1,5 +1,5 @@
 ---
-title: "Modeling patient-level outcomes"
+title: "Overview of abundance-based and spatial-based analysis approaches for multiplex imaging data"
 output:
   html_document: 
     toc: true

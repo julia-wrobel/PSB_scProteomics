@@ -1,5 +1,5 @@
 ---
-title: "Modeling patient-level outcomes"
+title: "Tools and software for functional data analysis of multiplexed imaging data"
 output:
   html_document: 
     toc: true

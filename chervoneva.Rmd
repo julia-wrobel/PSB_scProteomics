@@ -1,5 +1,5 @@
 ---
-title: "Modeling patient-level outcomes"
+title: "Quantile index biomarkers based on single-cell multiplex immunofluorescence imaging data"
 output:
   html_document: 
     toc: true
