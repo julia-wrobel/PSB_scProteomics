@@ -1,66 +1,19 @@
 ---
-title: "A short course on multiplex single-cell imaging in R"
+title: "Statistical analysis of spatial single-cell protein data"
 ---
 
-
-This page contains materials by [Julia Wrobel](http://juliawrobel.com/) for the short course titled "A workshop for analysis of multiplex single-cell imaging data in R" held at the University of Michigan Department of Biostatistics on April 6, 2023. 
-
+This page contains materials for a single-cell spatial proteomics and multiplex imaging data workshop held on January 3, 2024 at the [Pacific Symposium on Biocomputing (PSB)](https://psb.stanford.edu/). For raw materials, go to the [GitHub repository for this website](https://github.com/julia-wrobel/PSB_scProteomics).
 
 <br>
 
-### Acknowledgements 
+### Authors 
 
-I want to acknowledge the following collaborators, without whom this work wouldn't be possible:
+The following presenters contributed equally to this work:
 
-
-<br>
-
-#### University of Colorado Anschutz Medical Center
-
-**Department of Biostatistics Multiplex Imaging Group**
-
-* Debashis Ghosh
-* Thao Vu
-* [Souvik Seal](https://sealx017.github.io/)
-* Tushar Ghosh
-* Mansooreh Ahmadian
-* Ben Steinhart
-
-**School of Medicine**
-
-* Kimberly R Jordan
-* Elena Hsieh
-* Josh Thurman
-* Benjamin G Bitler
-* Christian Rickert
-* Erin Schenk
-
-<br>
-
-#### Vanderbilt Biostatistics Statistical Imaging Collective
-
-* [Simon Vandekar](https://simonvandekar.bitbucket.io/)
-* [Coleman Harris](https://colemanrharris.me/)
-
-
-<br>
-
-#### Moffitt Cancer Center
 
 * [Brooke Fridley](https://lab.moffitt.org/fridley/)
-* Alex Soupir
-* Jose Laborde
-
-<br>
-
-#### Thomas Jefferson University
-
-* Inna Chervoneva
-
-<br>
-
-#### Johns Hopkins Data Science Lab
-
-* [Stephanie Hicks](https://www.stephaniehicks.com/)
-* [Lukas Weber](https://lmweber.org/)
+* [Simon Vandekar](https://simonvandekar.bitbucket.io/)
+* [Inna Chervoneva](https://www.jefferson.edu/academics/colleges-schools-institutes/skmc/departments/pharmacology/faculty-staff/faculty/chervoneva.html)
+* [Julia Wrobel](http://juliawrobel.com/)
+* [Siyuan Ma](https://syma-research.github.io/) 
 
