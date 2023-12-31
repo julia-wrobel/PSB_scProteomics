@@ -11,7 +11,7 @@
 
 
 
-<title>Modeling patient-level outcomes</title>
+<title>A Flexible Generalized Linear Mixed Effects Model for Testing Cell-Cell Colocalization in Spatial Immunofluorescent Data</title>
 
 <script src="site_libs/header-attrs-2.25/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
@@ -367,18 +367,413 @@ div.tocify {
 
 
 
-<h1 class="title toc-ignore">Modeling patient-level outcomes</h1>
+<h1 class="title toc-ignore">A Flexible Generalized Linear Mixed Effects
+Model for Testing Cell-Cell Colocalization in Spatial Immunofluorescent
+Data</h1>
 
 </div>
 
 
 <div id="slide-deck" class="section level2">
 <h2>Slide Deck</h2>
-<iframe class="speakerdeck-iframe" frameborder="0" src="https://speakerdeck.com/player/3710e7390c4842afb3f85c22e729ecde" title="MI_fda" allowfullscreen="true" style="border: 0px; background: padding-box padding-box rgba(0, 0, 0, 0.1); margin: 0px; padding: 0px; border-radius: 6px; box-shadow: rgba(0, 0, 0, 0.2) 0px 5px 40px; width: 100%; height: auto; aspect-ratio: 560 / 314;" data-ratio="1.78343949044586">
+<iframe class="speakerdeck-iframe" frameborder="0" src="https://speakerdeck.com/player/90ae3791ec61459f8cf52e502486322c" title="psb_ma" allowfullscreen="true" style="border: 0px; background: padding-box padding-box rgba(0, 0, 0, 0.1); margin: 0px; padding: 0px; border-radius: 6px; box-shadow: rgba(0, 0, 0, 0.2) 0px 5px 40px; width: 100%; height: auto; aspect-ratio: 560 / 315;" data-ratio="1.7777777777777777">
 </iframe>
 </div>
-<div id="code" class="section level2">
-<h2>Code</h2>
+<div id="overview" class="section level2">
+<h2>Overview</h2>
+<p>This module focuses on testing cell-cell interaction (colocalization)
+using spatial regression, implemented in the R package
+<code>spaMM</code>.</p>
+<p>Load data and libraries.</p>
+<pre class="r"><code># required packages
+library(tidyverse)
+library(spaMM)
+theme_set(theme_bw() + theme(legend.position = &quot;bottom&quot;))
+
+# load processed ovarian cancer data
+load(url(&quot;https://github.com/julia-wrobel/MI_tutorial/raw/main/Data/ovarian.RDA&quot;))</code></pre>
+</div>
+<div id="visualize-cell-colocalization" class="section level2">
+<h2>Visualize cell colocalization</h2>
+<p>We visualize two samples from the ovarian cancer dataset from <a
+href="https://bioconductor.org/packages/release/data/experiment/html/VectraPolarisData.html">VectraPolarisData</a>
+and colocalization of B-cells and CD8- T-cells. We are interested in
+testing if this colocalization is significant (i.e., more interaction
+than random chance), and if it correlates with five-year survival.</p>
+<pre class="r"><code># create five-year survival variable
+ovarian_df &lt;- ovarian_df %&gt;%
+  mutate(vysurvival = case_when(
+    survival_time &gt;= 60  ~ 1,
+    death == 1 ~ 0,
+    TRUE ~ NA_real_
+  ))
+
+# cell phenotype variable
+ovarian_df &lt;- ovarian_df %&gt;%
+  mutate(phenotype = case_when(
+    phenotype_cd68 == &quot;CD68+&quot; ~ &quot;macrophage&quot;,
+    phenotype_cd19 == &quot;CD19+&quot; ~ &quot;B-cell&quot;,
+    phenotype_cd3 == &quot;CD3+&quot; &amp; phenotype_cd8 == &quot;CD8+&quot; ~ &quot;CD8+ T-cell&quot;,
+    phenotype_cd3 == &quot;CD3+&quot; &amp; phenotype_cd8 == &quot;CD8-&quot; ~ &quot;CD8- T-cell&quot;,
+    TRUE ~ &quot;other&quot;
+  )) 
+
+# subset to two samples with moderate B-cell populations
+subjs_subset &lt;- ovarian_df %&gt;% 
+  filter(!is.na(vysurvival)) %&gt;% 
+  group_by(sample_id, vysurvival) %&gt;% 
+  filter(any(phenotype == &quot;macrophage&quot;), 
+         any(phenotype == &quot;B-cell&quot;),
+         any(phenotype == &quot;CD8+ T-cell&quot;),
+         any(phenotype == &quot;CD8- T-cell&quot;)) %&gt;%
+  summarise(n_b_cells = sum(phenotype == &quot;B-cell&quot;)) %&gt;% 
+  filter(n_b_cells &lt; 100) %&gt;% 
+  group_by(vysurvival) %&gt;% 
+  arrange(-n_b_cells) %&gt;%
+  slice(1) %&gt;%
+  pull(sample_id)
+
+ovarian_df_subset &lt;- ovarian_df %&gt;% 
+  filter(sample_id %in% subjs_subset)
+
+# visualize B-cells and CD8- T-cells across images
+p_viz &lt;- ovarian_df_subset %&gt;% 
+  group_by(sample_id) %&gt;% 
+  mutate(x_viz = x - min(x),
+                y_viz = y - min(y)) %&gt;% 
+  mutate(phenotype_viz = phenotype %&gt;% 
+                  recode(
+                    &quot;CD8+ T-cell&quot; = &quot;other&quot;,
+                    &quot;macrophage&quot; = &quot;other&quot;) %&gt;% 
+                  factor(levels = c(&quot;other&quot;, &quot;CD8- T-cell&quot;, &quot;B-cell&quot;))) %&gt;%
+  arrange(phenotype_viz) %&gt;% 
+  ggplot(aes(x_viz, y_viz, color = phenotype_viz, size = phenotype_viz)) +
+  geom_point(alpha = 0.5) +
+  scale_color_manual(values = c(&quot;B-cell&quot; = &quot;red&quot;, 
+                                &quot;CD8- T-cell&quot; = &quot;blue&quot;, 
+                                &quot;other&quot; = &quot;grey&quot;)) +
+  scale_size_manual(values = c(&quot;B-cell&quot; = 0.5, 
+                                &quot;CD8- T-cell&quot; = 0.5, 
+                                &quot;other&quot; = 0.2)) +
+  facet_wrap(~ paste0(&quot;vysurvival &quot;, vysurvival) + 
+               paste0(&quot;sample_id &quot;, sample_id), nrow = 1) +
+  # annotation for 25 micron scale bar
+  annotate(geom = &quot;segment&quot;, x = 10, y = 10, xend = 35, yend = 10) +
+  annotate(geom = &quot;text&quot;, x = 22.5, y = 10, label = &quot;25&quot;, 
+           hjust = 0.5, vjust = -0.5) +
+  coord_fixed() +
+  theme(legend.position =&quot;bottom&quot;,
+        axis.text = element_blank(),
+        axis.ticks = element_blank(), 
+        panel.grid = element_blank())
+print(p_viz)</code></pre>
+<p><img src="ma_files/figure-html/unnamed-chunk-2-1.png" width="90%" /></p>
+</div>
+<div id="permutation-test-for-cell-colocalization"
+class="section level2">
+<h2>Permutation test for cell colocalization</h2>
+<p>Here we adopt a permutation based approach to test for cell-cell
+interaction. This was used in e.g. <a
+href="https://pubmed.ncbi.nlm.nih.gov/28783155/">histoCAT</a>.</p>
+<ul>
+<li><p>Red vertical lines indicate observed number of B-cell/CD8- T-cell
+interactions in each image.</p></li>
+<li><p>Histogram indicates number of interactions from randomly
+permuting cell phenotype labels.</p></li>
+<li><p>This approach can test for enrichment of interactions in each
+image, but is difficult to generalize across images, and to test for
+interaction correlation with phenotypes/outcomes.</p></li>
+</ul>
+<pre class="r"><code>threshold &lt;- 25
+
+# construct adjacency matrices for each image
+l_mat_adj &lt;- ovarian_df_subset %&gt;% 
+  group_split(sample_id) %&gt;% 
+  map(function(i_ovarian_df) {
+    mat_dist &lt;- i_ovarian_df %&gt;% 
+      select(x, y) %&gt;% 
+      as.matrix() %&gt;% 
+      dist() %&gt;% 
+      as.matrix()
+    dimnames(mat_dist) &lt;- list(i_ovarian_df$cell_id, i_ovarian_df$cell_id)
+    mat_adj &lt;- mat_dist &lt; threshold 
+    # don&#39;t count cell as its own neighbor
+    diag(mat_adj) &lt;- 0
+    
+    return(mat_adj)
+  })
+
+# visualize permuted interaction vs observed interaction
+n_perm &lt;- 500
+set.seed(0)
+df_interactions &lt;- ovarian_df_subset %&gt;% 
+  group_split(sample_id) %&gt;% 
+  map2_dfr(l_mat_adj, function(i_ovarian_df, i_mat_adj) {
+    n_observe &lt;- sum(i_mat_adj[i_ovarian_df$phenotype == &quot;B-cell&quot;, 
+                                i_ovarian_df$phenotype == &quot;CD8- T-cell&quot;])
+    n_permute &lt;- seq(1, n_perm) %&gt;% 
+      map_dbl(function(i_perm) {
+        i_ovarian_df_perm &lt;- i_ovarian_df %&gt;% 
+          sample_n(size = nrow(.), replace = FALSE)
+        sum(i_mat_adj[i_ovarian_df_perm$phenotype == &quot;B-cell&quot;, 
+                       i_ovarian_df_perm$phenotype == &quot;CD8- T-cell&quot;])
+      })
+    tibble(
+      sample_id = i_ovarian_df$sample_id[1],
+      vysurvival = i_ovarian_df$vysurvival[1],
+      n_observe = n_observe,
+      n_permute = n_permute
+    )
+  })
+
+p_interactions &lt;- df_interactions %&gt;% 
+  ggplot(aes(x = n_permute)) +
+  geom_histogram(bins = 50) +
+  geom_text(data = df_interactions %&gt;% filter(!duplicated(sample_id)),
+             aes(label = paste0(&quot;#interactions from data=&quot;, n_observe)), 
+            x = Inf, y = Inf,
+            vjust = 1.2, hjust = 1.05,
+            color = &quot;red&quot;) +
+  geom_vline(data = df_interactions %&gt;% 
+               filter(sample_id == 26) %&gt;% 
+               filter(!duplicated(sample_id)),
+             aes(xintercept = n_observe), color = &quot;red&quot;) +
+  facet_wrap(~ paste0(&quot;vysurvival &quot;, vysurvival) + 
+               paste0(&quot;sample_id &quot;, sample_id), nrow = 1) +
+  xlab(&quot;#interactions from permutation&quot;)
+print(p_interactions)</code></pre>
+<p><img src="ma_files/figure-html/unnamed-chunk-3-1.png" width="90%" /></p>
+</div>
+<div id="test-for-cell-colocalization-using-spatial-regression"
+class="section level2">
+<h2>Test for cell colocalization using spatial regression</h2>
+<p>We can perform spatial regression on each B-cell’s local
+neighborhood, and the enrichment of CD8 T-cells in each
+neighborhood.</p>
+<div id="visualize-the-local-neighborhood-of-one-b-cell"
+class="section level3">
+<h3>Visualize the local neighborhood of one B-cell</h3>
+<pre class="r"><code># calculate number of neighboring cells for each B-cell
+df_nb &lt;- ovarian_df_subset %&gt;% 
+  group_split(sample_id) %&gt;% 
+  map2_dfr(l_mat_adj, function(i_ovarian_df, i_mat_adj) {
+    # count the number of neighbors for each B-cell
+    i_df_nb &lt;- i_mat_adj[i_ovarian_df$phenotype == &quot;B-cell&quot;, ] %&gt;% 
+      apply(1, function(x) tapply(x, i_ovarian_df$phenotype, sum)) %&gt;% 
+      t() %&gt;% 
+      as.data.frame() %&gt;% 
+      rownames_to_column(&quot;cell_id&quot;) %&gt;% 
+      mutate(total = `B-cell` + `CD8- T-cell` + `CD8+ T-cell` + macrophage + other,
+             sample_id = i_ovarian_df$sample_id[1]) %&gt;% 
+      # remove singletons
+      filter(total &gt; 0)
+    
+    return(i_df_nb)
+  })
+df_nb &lt;- df_nb %&gt;% 
+  mutate(cell_id = as.numeric(cell_id)) %&gt;% 
+  left_join(ovarian_df_subset, 
+            by = c(&quot;sample_id&quot;, &quot;cell_id&quot;))
+
+# visualize the local neighborhood of a particular B-cell
+df_one_cell &lt;- df_nb %&gt;% 
+  filter(sample_id == 25) %&gt;% 
+  arrange(-`CD8- T-cell`) %&gt;% 
+  slice(1)
+nbs &lt;- l_mat_adj[[1]][as.character(df_one_cell$cell_id), ] %&gt;% 
+  keep(~.x &gt; 0) %&gt;% 
+  names() %&gt;% 
+  as.numeric()
+nbs &lt;- c(nbs, df_one_cell$cell_id)
+df_cell_viz &lt;- ovarian_df_subset %&gt;% 
+  filter(sample_id == 25) %&gt;% 
+  filter(x &lt; df_one_cell$x + 30 &amp; x &gt; df_one_cell$x - 30,
+         y &lt; df_one_cell$y + 30 &amp; y &gt; df_one_cell$y - 30)
+p_cell_viz &lt;- df_cell_viz %&gt;%
+  mutate(phenotype_viz = phenotype %&gt;% 
+                  recode(
+                    &quot;CD8+ T-cell&quot; = &quot;other&quot;,
+                    &quot;macrophage&quot; = &quot;other&quot;) %&gt;% 
+                  factor(levels = c(&quot;other&quot;, &quot;CD8- T-cell&quot;, &quot;B-cell&quot;))) %&gt;% 
+  ggplot(aes(x = x, y = y, 
+             color = phenotype_viz, 
+             size = cell_id == df_one_cell$cell_id)) +
+  geom_point() +
+  scale_color_manual(values = c(&quot;B-cell&quot; = &quot;red&quot;, &quot;CD8- T-cell&quot; = &quot;blue&quot;,
+                                &quot;other&quot; = &quot;grey&quot;)) +
+  # don&#39;t show size legend
+  scale_size_manual(values = c(&quot;TRUE&quot; = 3, &quot;FALSE&quot; = 2), guide = &quot;none&quot;) +
+  # draw a neighborhood circle around the center cell
+  annotate(&quot;path&quot;,
+           x = df_one_cell$x + 25*cos(seq(0,2*pi,length.out=100)),
+           y = df_one_cell$y + 25*sin(seq(0,2*pi,length.out=100)),
+           color = &quot;red&quot;, 
+           linetype = &quot;dashed&quot;) +
+  coord_fixed() +
+  theme(axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        panel.grid = element_blank())
+print(p_cell_viz)</code></pre>
+<p><img src="ma_files/figure-html/unnamed-chunk-4-1.png" width="90%" /></p>
+<pre class="r"><code>
+# calculate overall density of cells within each image
+# used as &quot;offset&quot; terms in spaMM regression
+df_density &lt;- ovarian_df_subset %&gt;%
+  group_by(sample_id) %&gt;% 
+  mutate(n_total = n()) %&gt;% 
+  group_by(sample_id, phenotype) %&gt;% 
+  summarise(density = n() / n_total[1]) %&gt;% 
+  pivot_wider(names_from = phenotype, values_from = density, 
+                     names_prefix = &quot;density_&quot;)
+df_nb &lt;- df_nb %&gt;% 
+  left_join(df_density, by = &quot;sample_id&quot;)</code></pre>
+</div>
+<div id="spamm-regression" class="section level3">
+<h3><code>spaMM</code> regression</h3>
+<p>Fit spatial regression using <code>spaMM::fitme</code>. Regression
+terms:</p>
+<ul>
+<li><p><code>vysurvival</code>: the variable of interest.</p></li>
+<li><p><code>Matern(1|x + y %in% sample_id)</code>: Matern spatial
+correlation term.</p></li>
+<li><p><code>offset(log(\`density_CD8- T-cell` / (1 - `density_CD8- T-cell`)))</code>:
+offset term for “background” prevalence of CD8- T-cells.</p></li>
+</ul>
+<pre class="r"><code>fit_spaMM &lt;- 
+  fitme(
+    formula = 
+      cbind(`CD8- T-cell`, total - `CD8- T-cell`) ~ 
+      # covariate of interest
+      vysurvival + 
+      # spatial correlation term
+      Matern(1|x + y %in% sample_id) +
+      # offset term for &quot;background&quot; prevalence of CD8- T-cells
+      offset(log(`density_CD8- T-cell` / (1 - `density_CD8- T-cell`))),
+    data = df_nb,
+    family = binomial(link = &quot;logit&quot;),
+    fixed = list(&quot;nu&quot; = 0.5),
+    method = &quot;ML&quot;)
+print(fit_spaMM)
+## formula: cbind(`CD8- T-cell`, total - `CD8- T-cell`) ~ vysurvival + Matern(1 | 
+##     x + y %in% sample_id) + offset(log(`density_CD8- T-cell`/(1 - 
+##     `density_CD8- T-cell`)))
+## Estimation of corrPars and lambda by ML (p_v approximation of logL).
+## Estimation of fixed effects by ML (p_v approximation of logL).
+## Estimation of lambda by &#39;outer&#39; ML, maximizing logL.
+## family: binomial( link = logit ) 
+##  ------------ Fixed effects (beta) ------------
+##             Estimate Cond. SE t-value
+## (Intercept)    2.303   0.3996   5.764
+## vysurvival    -2.002   0.6039  -3.316
+##  --------------- Random effects ---------------
+## Family: gaussian( link = identity ) 
+##                    --- Correlation parameters:
+##       1.nu      1.rho 
+## 0.50000000 0.01121604 
+##            --- Variance parameters (&#39;lambda&#39;):
+## lambda = var(u) for u ~ Gaussian; 
+##    x + y %in.  :  1.116  
+## # of obs: 171; # of groups: x + y %in., 171 
+##  ------------- Likelihood values  -------------
+##                         logLik
+## logL       (p_v(h)): -161.5562</code></pre>
+</div>
+<div id="understanding-the-output-of-fitme" class="section level3">
+<h3>Understanding the output of <code>fitme</code></h3>
+<p>Many of these are detailed in the documentation
+<code>?HLfit</code>.</p>
+<ul>
+<li><p>Fixed effects: estimated coefficients. The conditional standard
+errors are not very informative, as they do not account for the
+uncertainty in the random effects term. Below we will perform
+inferenence on these parameters using likelihood ratio tests
+instead.</p></li>
+<li><p>Random effects:</p>
+<ul>
+<li><p>Matern correlation parameters (see <code>?MaternCorr</code> for
+more details):</p>
+<ul>
+<li><p><code>nu</code>: smoothness parameter for the Matern correlation
+function. We pre-fixed this at 1/2.</p></li>
+<li><p><code>rho</code>: estimated correlation length for the Matern
+correlation function. This is the parameter that controls the range of
+the spatial correlation.</p></li>
+<li><p>Under these specifications, the Matern correlation for two cells
+with distance <code>d</code> is <code>exp(-rho * d)</code>. See
+<code>?MaternCorr</code> for more details.</p></li>
+</ul></li>
+<li><p>Variance of spatial correlation (<code>lambda</code>):</p>
+<ul>
+<li><p>Details in <code>?`random-effects`</code>.</p></li>
+<li><p><code>lambda</code> is the variance of i.i.d normal random
+variables, which are then multipled by a Cholesky decomposition of the
+Matern correlation to generate spatially correlated random
+effects.</p></li>
+</ul></li>
+</ul></li>
+</ul>
+</div>
+<div id="lrt-testing-of-fixed-effects" class="section level3">
+<h3>LRT testing of fixed effects</h3>
+<p>We perform LRT on fixed effects by contrasting the fully specified
+model versus “null” models.</p>
+<ul>
+<li>The intercept is the enrichment of CD8- T-cell colocalizaiton in
+B-cell neighborhoods (when <code>vysurvival = 0</code>), accounting for
+the “background” chance of CD8- T-cells in the images.</li>
+</ul>
+<pre class="r"><code>fit_spaMM_null1 &lt;- 
+  fitme(
+    formula = 
+      cbind(`CD8- T-cell`, total - `CD8- T-cell`) ~ 
+      # null model with no intercept
+      0 + vysurvival +
+      Matern(1|x + y %in% sample_id) +
+      offset(log(`density_CD8- T-cell` / (1 - `density_CD8- T-cell`))),
+    data = df_nb,
+    family = binomial(link = &quot;logit&quot;),
+    fixed = list(&quot;nu&quot; = 0.5),
+    method = &quot;ML&quot;)
+
+1 - pchisq(2 * (logLik(fit_spaMM) - logLik(fit_spaMM_null1)), df = 1)
+##         p_v 
+## 0.002247611</code></pre>
+<ul>
+<li>The coefficient for <code>vysurvival</code> is whether or not this
+enrichment is correlated with five-year survival.</li>
+</ul>
+<pre class="r"><code>fit_spaMM_null2 &lt;- 
+  fitme(
+    formula = 
+      cbind(`CD8- T-cell`, total - `CD8- T-cell`) ~ 
+      # null model with no vysurvival
+      1 + 
+      Matern(1|x + y %in% sample_id) +
+      offset(log(`density_CD8- T-cell` / (1 - `density_CD8- T-cell`))),
+    data = df_nb,
+    family = binomial(link = &quot;logit&quot;),
+    fixed = list(&quot;nu&quot; = 0.5),
+    method = &quot;ML&quot;)
+
+1 - pchisq(2 * (logLik(fit_spaMM) - logLik(fit_spaMM_null2)), df = 1)
+##         p_v 
+## 0.007631282</code></pre>
+</div>
+</div>
+<div id="references" class="section level2">
+<h2>References</h2>
+<ul>
+<li><a href="https://pubmed.ncbi.nlm.nih.gov/34529988/">Colocalization
+of Treg with other immune cells in the IBD epithelium</a></li>
+<li><a
+href="https://pubmed.ncbi.nlm.nih.gov/28783155/">histoCAT</a></li>
+<li><a
+href="https://cran.r-project.org/web/packages/spaMM/index.html">spaMM</a></li>
+<li><a
+href="https://bioconductor.org/packages/release/data/experiment/html/VectraPolarisData.html">VectraPolarisData</a></li>
+<li><a href="https://pubmed.ncbi.nlm.nih.gov/34615692/">Ovarian cancer
+paper</a></li>
+</ul>
 </div>
 
 
